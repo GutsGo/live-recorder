@@ -42,7 +42,7 @@ version = "v4.0.7"
 platforms = ("\n国内站点：抖音|快手|虎牙|斗鱼|YY|B站|小红书|bigo|blued|网易CC|千度热播|猫耳FM|Look|TwitCasting|百度|微博|"
              "酷狗|花椒|流星|Acfun|畅聊|映客|音播|知乎|嗨秀|VV星球|17Live|浪Live|漂漂|六间房|乐嗨|花猫|淘宝|京东|咪咕|连接|来秀"
              "\n海外站点：TikTok|SOOP|PandaTV|WinkTV|FlexTV|PopkonTV|TwitchTV|LiveMe|ShowRoom|CHZZK|Shopee|"
-             "Youtube|Faceit|Picarto")
+             "Youtube|Faceit|Picarto|Chaturbate")
 
 recording = set()
 error_count = 0
@@ -53,8 +53,8 @@ error_window_size = 10
 error_threshold = 5
 monitoring = 0
 running_list = []
-url_tuples_list = []
 url_comments = []
+url_line_list = []
 text_no_repeat_url = []
 create_var = locals()
 first_start = True
@@ -376,10 +376,13 @@ def run_script(command: str) -> None:
 def clear_record_info(record_name: str, record_url: str) -> None:
     global monitoring
     recording.discard(record_name)
-    if record_url in url_comments and record_url in running_list:
+    if (record_url in url_comments or record_url not in url_line_list) and record_url in running_list:
         running_list.remove(record_url)
         monitoring -= 1
-        color_obj.print_colored(f"[{record_name}]已经从录制列表中移除\n", color_obj.YELLOW)
+        if record_url in url_comments:
+            color_obj.print_colored(f"[{record_name}]已被注释，已经从录制列表中移除\n", color_obj.YELLOW)
+        else:
+            color_obj.print_colored(f"[{record_name}]已被删除，已经从录制列表中移除\n", color_obj.YELLOW)
 
 
 def direct_download_stream(source_url: str, save_path: str, record_name: str, live_url: str, platform: str) -> bool:
@@ -402,8 +405,11 @@ def direct_download_stream(source_url: str, save_path: str, record_name: str, li
                 chunk_size = 1024 * 16
 
                 for chunk in response.iter_bytes(chunk_size):
-                    if live_url in url_comments or exit_recording:
-                        color_obj.print_colored(f"[{record_name}]录制时已被注释或请求停止,下载中断", color_obj.YELLOW)
+                    if live_url in url_comments or live_url not in url_line_list or exit_recording:
+                        if live_url in url_comments:
+                            color_obj.print_colored(f"[{record_name}]录制时已被注释,下载中断", color_obj.YELLOW)
+                        elif live_url not in url_line_list:
+                            color_obj.print_colored(f"[{record_name}]录制时已被删除,下载中断", color_obj.YELLOW)
                         clear_record_info(record_name, live_url)
                         return False
 
@@ -434,8 +440,11 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
         create_var[subs_thread_name].start()
 
     while process.poll() is None:
-        if record_url in url_comments or exit_recording:
-            color_obj.print_colored(f"[{record_name}]录制时已被注释,本条线程将会退出", color_obj.YELLOW)
+        if record_url in url_comments or record_url not in url_line_list or exit_recording:
+            if record_url in url_comments:
+                color_obj.print_colored(f"[{record_name}]录制时已被注释,本条线程将会退出", color_obj.YELLOW)
+            elif record_url not in url_line_list:
+                color_obj.print_colored(f"[{record_name}]录制时已被删除,本条线程将会退出", color_obj.YELLOW)
             clear_record_info(record_name, record_url)
             # process.terminate()
             if os.name == 'nt':
@@ -1023,6 +1032,13 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
                             port_info = asyncio.run(spider.get_picarto_stream_url(
                                 url=record_url, proxy_addr=proxy_address, cookies=picarto_cookie))
 
+                    elif record_url.find("chaturbate.com") > -1:
+                        platform = 'Chaturbate'
+                        with semaphore:
+                            json_data = asyncio.run(spider.get_chaturbate_stream_data(
+                                url=record_url, proxy_addr=proxy_address, cookies=chaturbate_cookie))
+                            port_info = asyncio.run(stream.get_stream_url(json_data, record_quality, spec=False))
+
                     elif record_url.find(".m3u8") > -1 or record_url.find(".flv") > -1:
                         platform = '自定义录制直播'
                         port_info = {
@@ -1058,8 +1074,11 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
                         anchor_name = clean_name(anchor_name)
                         record_name = f'序号{count_variable} {anchor_name}'
 
-                        if record_url in url_comments:
-                            print(f"[{anchor_name}]已被注释,本条线程将会退出")
+                        if record_url in url_comments or record_url not in url_line_list:
+                            if record_url in url_comments:
+                                print(f"[{anchor_name}]已被注释,本条线程将会退出")
+                            else:
+                                print(f"[{anchor_name}]已被删除,本条线程将会退出")
                             clear_record_info(record_name, record_url)
                             return
 
@@ -1923,6 +1942,7 @@ while True:
     lianjie_cookie = read_config_value(config, 'Cookie', 'lianjie_cookie', '')
     laixiu_cookie = read_config_value(config, 'Cookie', 'laixiu_cookie', '')
     picarto_cookie = read_config_value(config, 'Cookie', 'picarto_cookie', '')
+    chaturbate_cookie = read_config_value(config, 'Cookie', 'chaturbate_cookie', '')
 
     video_save_type_list = ("FLV", "MKV", "TS", "MP4", "MP3音频", "M4A音频", "MP3", "M4A")
     if video_save_type and video_save_type.upper() in video_save_type_list:
@@ -1945,7 +1965,8 @@ while True:
 
 
     try:
-        url_comments, line_list, url_line_list = [[] for _ in range(3)]
+        new_url_comments, line_list, new_url_line_list = [[] for _ in range(3)]
+        new_url_tuples_list = []
         with (open(url_config_file, "r", encoding=text_encoding, errors='ignore') as file):
             for origin_line in file:
                 if origin_line in line_list:
@@ -1984,8 +2005,8 @@ while True:
                 if quality not in ("原画", "蓝光", "超清", "高清", "标清", "流畅"):
                     quality = '原画'
 
-                if url not in url_line_list:
-                    url_line_list.append(url)
+                if url not in new_url_line_list:
+                    new_url_line_list.append(url)
                 else:
                     delete_line(url_config_file, origin_line)
 
@@ -2098,16 +2119,19 @@ while True:
                             new_url = url.split('?')[0] + f'?host_id={host_id.group(1)}'
                             url = update_file(url_config_file, old_str=url, new_str=new_url)
 
-                    url_comments = [i for i in url_comments if url not in i]
+                    new_url_comments = [i for i in new_url_comments if url != i]
                     if is_comment_line:
-                        url_comments.append(url)
+                        new_url_comments.append(url)
                     else:
                         new_line = (quality, url, name)
-                        url_tuples_list.append(new_line)
+                        new_url_tuples_list.append(new_line)
                 else:
                     if not origin_line.startswith('#'):
                         color_obj.print_colored(f"\r{origin_line.strip()} 本行包含未知链接.此条跳过", color_obj.YELLOW)
                         update_file(url_config_file, old_str=origin_line, new_str=origin_line, start_str='#')
+
+        url_comments = new_url_comments
+        url_line_list = new_url_line_list
 
         while len(need_update_line_list):
             a = need_update_line_list.pop()
@@ -2121,7 +2145,7 @@ while True:
                     new_word = replace_words[1]
                 update_file(url_config_file, old_str=replace_words[0], new_str=new_word, start_str=start_with)
 
-        text_no_repeat_url = list(set(url_tuples_list))
+        text_no_repeat_url = list(set(new_url_tuples_list))
 
         if len(text_no_repeat_url) > 0:
             for url_tuple in text_no_repeat_url:
@@ -2139,7 +2163,6 @@ while True:
                     create_var[f'thread_{monitoring}'].start()
                     running_list.append(url_tuple[1])
                     time.sleep(local_delay_default)
-        url_tuples_list = []
         first_start = False
 
     except Exception as err:

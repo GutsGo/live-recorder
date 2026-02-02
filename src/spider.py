@@ -3393,3 +3393,40 @@ async def get_picarto_stream_url(url: str, proxy_addr: OptionalStr = None, cooki
         m3u8_url = f"https://1-edge1-us-newyork.picarto.tv/stream/hls/golive+{anchor_name}/index.m3u8"
         result |= {'is_live': True, 'title': title, 'm3u8_url': m3u8_url, 'record_url': m3u8_url}
     return result
+
+
+@trace_error_decorator
+async def get_chaturbate_stream_data(url: str, proxy_addr: OptionalStr = None, cookies: OptionalStr = None) -> dict:
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/138.0.0.0 Safari/537.36',
+        'X-Requested-With': 'XMLHttpRequest',
+    }
+    if cookies:
+        headers['cookie'] = cookies
+
+    # 处理 URL，去掉末尾可能存在的斜杠和查询参数，然后根据最后一个斜杠获取 room_slug
+    clean_url = url.split('?')[0].strip('/')
+    room_slug = clean_url.rsplit('/', maxsplit=1)[-1]
+
+    api = 'https://chaturbate.com/get_edge_hls_url_ajax/'
+    data = {'room_slug': room_slug}
+
+    try:
+        json_str = await async_req(api, proxy_addr=proxy_addr, headers=headers, data=data)
+        if not json_str:
+            return {"anchor_name": room_slug, "is_live": False}
+        json_data = json.loads(json_str)
+
+        anchor_name = room_slug
+        room_status = json_data.get('room_status')
+        live_status = json_data.get('success') is True and room_status == 'public'
+
+        result = {"anchor_name": anchor_name, "is_live": live_status}
+        if live_status:
+            m3u8_url = json_data.get('url')
+            result |= {'is_live': True, 'm3u8_url': m3u8_url, 'record_url': m3u8_url}
+        return result
+    except Exception as e:
+        print(f"Chaturbate data fetch error: {e}")
+        return {"anchor_name": room_slug, "is_live": False}
