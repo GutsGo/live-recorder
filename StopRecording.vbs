@@ -2,7 +2,7 @@
 '* File Name       : StopRecording.vbs
 '* Created Date  : 2024-10-15 01:50:30
 '* Author            : Hmily
-'* GitHub            : http://github.com/ihmily
+'* GitHub            : http://github.com/GutsGo
 '* Description     : This script is designed to terminate the process of live recording
 '********************************************************************************************/
 
@@ -10,7 +10,7 @@ Dim objWMIService, colProcesses, objProcess
 Dim intResponse
 strComputer = "."
 On Error Resume Next
-intResponse = MsgBox("È·¶¨Òª½áÊøËùÓÐºóÌ¨Ö±²¥Â¼ÖÆ½ø³ÌÂð£¿", vbYesNo + vbQuestion, "È·ÈÏ½áÊø½ø³Ì")
+intResponse = MsgBox("È·ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðºï¿½Ì¨Ö±ï¿½ï¿½Â¼ï¿½Æ½ï¿½ï¿½ï¿½ï¿½ï¿½", vbYesNo + vbQuestion, "È·ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")
 
 If intResponse = vbYes Then
     Set objWMIService = GetObject("winmgmts:\\" & strComputer & "\root\cimv2")
@@ -20,14 +20,14 @@ If intResponse = vbYes Then
 
     Set colProcesses = objWMIService.ExecQuery("Select * from Win32_Process Where Name = 'ffmpeg.exe'")
     Set colProcesses2 = objWMIService.ExecQuery("Select * from Win32_Process Where Name = 'pythonw.exe'")
-    Set colProcesses3 = objWMIService.ExecQuery("Select * from Win32_Process Where Name = 'DouyinLiveRecorder.exe'")
+    Set colProcesses3 = objWMIService.ExecQuery("Select * from Win32_Process Where Name = 'live-recorder.exe'")
     If Err.Number <> 0 Then
         Err.Clear
     End If
 
     If Not objWMIService Is Nothing And Not colProcesses Is Nothing  And Not colProcesses2 Is Nothing Then
         If colProcesses2.Count = 0 And colProcesses3.Count = 0 Then
-            MsgBox "Ã»ÓÐÕÒµ½Â¼ÖÆ³ÌÐòµÄ½ø³Ì", vbExclamation, "ÌáÊ¾ÐÅÏ¢"
+            MsgBox "Ã»ï¿½ï¿½ï¿½Òµï¿½Â¼ï¿½Æ³ï¿½ï¿½ï¿½Ä½ï¿½ï¿½ï¿½", vbExclamation, "ï¿½ï¿½Ê¾ï¿½ï¿½Ï¢"
             WScript.Quit(1)
         Else
             For Each objProcess in colProcesses
@@ -41,7 +41,7 @@ If intResponse = vbYes Then
     Else
         objShell.Run "taskkill /f /im " & objProcess.Name, 0, True
     End If
-    MsgBox "ÒÑ³É¹¦½áÊøÕýÔÚÂ¼ÖÆÖ±²¥µÄ½ø³Ì£¡" & vbCrLf & "¹Ø±Õ´Ë´°¿Ú30Ãëºó×Ô¶¯Í£Ö¹Â¼ÖÆ³ÌÐò", vbInformation, "ÌáÊ¾ÐÅÏ¢"
+    MsgBox "ï¿½Ñ³É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Ö±ï¿½ï¿½ï¿½Ä½ï¿½ï¿½Ì£ï¿½" & vbCrLf & "ï¿½Ø±Õ´Ë´ï¿½ï¿½ï¿½30ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½Í£Ö¹Â¼ï¿½Æ³ï¿½ï¿½ï¿½", vbInformation, "ï¿½ï¿½Ê¾ï¿½ï¿½Ï¢"
 
     WScript.Sleep 10000
     If colProcesses3.Count <> 0 Then
@@ -57,7 +57,7 @@ If intResponse = vbYes Then
         End If         
     Next
 Else
-    MsgBox "ÒÑÈ¡Ïû½áÊøÂ¼ÖÆ²Ù×÷", vbExclamation, "ÌáÊ¾ÐÅÏ¢"
+    MsgBox "ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½Æ²ï¿½ï¿½ï¿½", vbExclamation, "ï¿½ï¿½Ê¾ï¿½ï¿½Ï¢"
 End If
 
 On Error GoTo 0
