@@ -2088,7 +2088,9 @@ while True:
                     '.shp.ee',
                     'www.youtube.com',
                     'youtu.be',
-                    'www.faceit.com'
+                    'www.faceit.com',
+                    'www.chaturbate.com',
+                    'chaturbate.com'
                 ]
 
                 platform_host.extend(overseas_platform_host)
@@ -2103,7 +2105,8 @@ while True:
                     "www.haixiutv.com",
                     "v.6.cn",
                     "m.6.cn",
-                    'www.lehaitv.com'
+                    'www.lehaitv.com',
+                    'chaturbate.com'
                 )
 
                 if 'live.shopee.' in url_host or '.shp.ee' in url_host:
