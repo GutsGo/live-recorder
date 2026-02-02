@@ -1,6 +1,6 @@
-# DouyinLiveRecorder.
+# live-recorder.
 # Copyright (C) 2024 Hmily
-# This file is distributed under the same license as the DouyinLiveRecorder package.
+# This file is distributed under the same license as the live-recorder package.
 #
 #, fuzzy
 
@@ -16,7 +16,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: douyinliverecorder/spider.py
+#: live-recorder/spider.py
 msgid "IP banned. Please change device or network."
 msgstr "IP被禁止 请更换设备或网络"
 

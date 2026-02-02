@@ -12,7 +12,7 @@ body:
     attributes:
       label: ⚠️ Search for similar issues
       description: >
-        🔍 [Click here to search historical issues](https://github.com/ihmily/DouyinLiveRecorder/issues?q=is%3Aissue) using keywords to ensure there are no duplicate issues.
+        🔍 [Click here to search historical issues](https://github.com/GutsGo/live-recorder/issues?q=is%3Aissue) using keywords to ensure there are no duplicate issues.
       options:
         - label: I have searched the issues and found no similar issues
           required: true

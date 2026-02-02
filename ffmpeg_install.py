@@ -2,7 +2,7 @@
 
 """
 Author: Hmily
-GitHub: https://github.com/ihmily
+GitHub: https://github.com/GutsGo
 Copyright (c) 2024 by Hmily, All Rights Reserved.
 """
 

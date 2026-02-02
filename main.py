@@ -2,7 +2,7 @@
 
 """
 Author: Hmily
-GitHub: https://github.com/ihmily
+GitHub: https://github.com/GutsGo
 Date: 2023-07-17 23:52:05
 Update: 2025-10-23 19:48:05
 Copyright (c) 2023-2025 by Hmily, All Rights Reserved.
@@ -1731,11 +1731,11 @@ def check_ffmpeg_existence() -> bool:
 
 # --------------------------初始化程序-------------------------------------
 print("-----------------------------------------------------")
-print("|                DouyinLiveRecorder                 |")
+print("|                live-recorder                 |")
 print("-----------------------------------------------------")
 
 print(f"版本号: {version}")
-print("GitHub: https://github.com/ihmily/DouyinLiveRecorder")
+print("GitHub: https://github.com/GutsGo/live-recorder")
 print(f'支持平台: {platforms}')
 print('.....................................................')
 if not check_ffmpeg_existence():
