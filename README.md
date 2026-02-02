@@ -3,7 +3,7 @@
 ## 💡简介
 [![Python Version](https://img.shields.io/badge/python-3.11.6-blue.svg)](https://www.python.org/downloads/release/python-3116/)
 [![Supported Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-blue.svg)](https://github.com/GutsGo/live-recorder)
-[![Docker Pulls](https://img.shields.io/docker/pulls/GutsGo/douyin-live-recorder?label=Docker%20Pulls&color=blue&logo=docker)](https://hub.docker.com/r/GutsGo/douyin-live-recorder/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/imagindragons/live-recorder?label=Docker%20Pulls&color=blue&logo=docker)](https://hub.docker.com/r/imagindragons/live-recorder/tags)
 ![GitHub issues](https://img.shields.io/github/issues/GutsGo/live-recorder.svg)
 [![Latest Release](https://img.shields.io/github/v/release/GutsGo/live-recorder)](https://github.com/GutsGo/live-recorder/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/GutsGo/live-recorder/total)](https://github.com/GutsGo/live-recorder/releases/latest)
@@ -413,10 +413,10 @@ docker-compose up
 
 2.构建镜像(可选)
 
-如果你只想简单的运行程序，则不需要做这一步。Docker镜像仓库中代码版本可能不是最新的，如果要运行本仓库主分支最新代码，可以本地自定义构建，通过修改 [docker-compose.yaml](https://github.com/GutsGo/live-recorder/blob/main/docker-compose.yaml) 文件，如将镜像名修改为 `douyin-live-recorder:latest`，并取消 `# build: .` 注释，然后再执行
+如果你只想简单的运行程序，则不需要做这一步。Docker镜像仓库中代码版本可能不是最新的，如果要运行本仓库主分支最新代码，可以本地自定义构建，通过修改 [docker-compose.yaml](https://github.com/GutsGo/live-recorder/blob/main/docker-compose.yaml) 文件，如将镜像名修改为 `live-recorder:latest`，并取消 `# build: .` 注释，然后再执行
 
 ```bash
-docker build -t douyin-live-recorder:latest .
+docker build -t live-recorder:latest .
 docker-compose up
 ```
 
