@@ -3419,13 +3419,20 @@ async def get_chaturbate_stream_data(url: str, proxy_addr: OptionalStr = None, c
         json_data = json.loads(json_str)
 
         anchor_name = room_slug
-        room_status = json_data.get('room_status')
-        live_status = json_data.get('success') is True and room_status == 'public'
+        room_status = json_data.get('room_status', 'unknown')
+        m3u8_url = json_data.get('url', '')
+        
+        # 只要有 URL 且成功，就认为在直播
+        live_status = json_data.get('success') is True and bool(m3u8_url)
 
         result = {"anchor_name": anchor_name, "is_live": live_status}
         if live_status:
-            m3u8_url = json_data.get('url')
             result |= {'is_live': True, 'm3u8_url': m3u8_url, 'record_url': m3u8_url}
+        else:
+            # 如果没在直播，打印一下状态原因，方便用户排查（如：offline, private, password 等）
+            if room_status != 'offline':
+                print(f"\rChaturbate 房间 {room_slug} 当前状态: {room_status}")
+                
         return result
     except Exception as e:
         print(f"Chaturbate data fetch error: {e}")
