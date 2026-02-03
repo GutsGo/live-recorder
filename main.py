@@ -38,7 +38,7 @@ from ffmpeg_install import (
     check_ffmpeg, ffmpeg_path, current_env_path
 )
 
-version = "v4.0.7"
+version = "v1.2.0"
 platforms = ("\n国内站点：抖音|快手|虎牙|斗鱼|YY|B站|小红书|bigo|blued|网易CC|千度热播|猫耳FM|Look|TwitCasting|百度|微博|"
              "酷狗|花椒|流星|Acfun|畅聊|映客|音播|知乎|嗨秀|VV星球|17Live|浪Live|漂漂|六间房|乐嗨|花猫|淘宝|京东|咪咕|连接|来秀"
              "\n海外站点：TikTok|SOOP|PandaTV|WinkTV|FlexTV|PopkonTV|TwitchTV|LiveMe|ShowRoom|CHZZK|Shopee|"
@@ -1037,7 +1037,7 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
                         with semaphore:
                             json_data = asyncio.run(spider.get_chaturbate_stream_data(
                                 url=record_url, proxy_addr=proxy_address, cookies=chaturbate_cookie))
-                            port_info = asyncio.run(stream.get_stream_url(json_data, record_quality, spec=False))
+                            port_info = json_data
 
                     elif record_url.find(".m3u8") > -1 or record_url.find(".flv") > -1:
                         platform = '自定义录制直播'
@@ -2011,7 +2011,7 @@ while True:
                     delete_line(url_config_file, origin_line)
 
                 url = 'https://' + url if '://' not in url else url
-                url_host = url.split('/')[2]
+                url_host = url.split('/')[2].lower()
 
                 platform_host = [
                     'live.douyin.com',
@@ -2106,7 +2106,8 @@ while True:
                     "v.6.cn",
                     "m.6.cn",
                     'www.lehaitv.com',
-                    'chaturbate.com'
+                    'chaturbate.com',
+                    'www.chaturbate.com'
                 )
 
                 if 'live.shopee.' in url_host or '.shp.ee' in url_host:

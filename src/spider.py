@@ -24,6 +24,7 @@ import re
 import json
 import execjs
 import urllib.request
+import codecs
 from . import JS_SCRIPT_PATH, utils
 from .utils import trace_error_decorator, generate_random_string
 from .logger import script_path
@@ -3397,39 +3398,123 @@ async def get_picarto_stream_url(url: str, proxy_addr: OptionalStr = None, cooki
 
 @trace_error_decorator
 async def get_chaturbate_stream_data(url: str, proxy_addr: OptionalStr = None, cookies: OptionalStr = None) -> dict:
+    # 处理 URL，根据最后一个斜杠获取 room_slug
+    room_slug = url.split('?')[0].strip('/').rsplit('/', maxsplit=1)[-1]
+
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/138.0.0.0 Safari/537.36',
-        'X-Requested-With': 'XMLHttpRequest',
+                      'Chrome/133.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
     }
     if cookies:
         headers['cookie'] = cookies
 
-    # 处理 URL，去掉末尾可能存在的斜杠和查询参数，然后根据最后一个斜杠获取 room_slug
-    clean_url = url.split('?')[0].strip('/')
-    room_slug = clean_url.rsplit('/', maxsplit=1)[-1]
-
-    api = 'https://chaturbate.com/get_edge_hls_url_ajax/'
-    data = {'room_slug': room_slug}
+    room_url = f'https://chaturbate.com/{room_slug}/'
 
     try:
-        json_str = await async_req(api, proxy_addr=proxy_addr, headers=headers, data=data)
-        if not json_str:
-            return {"anchor_name": room_slug, "is_live": False}
-        json_data = json.loads(json_str)
-
-        anchor_name = room_slug
-        room_status = json_data.get('room_status', 'unknown')
-        m3u8_url = json_data.get('url', '')
+        # 使用 http2=False 避免部分环境下的连接问题
+        html_str = await async_req(room_url, proxy_addr=proxy_addr, headers=headers, http2=False)
         
-        # 只要有 URL 且成功，就认为在直播
-        live_status = json_data.get('success') is True and bool(m3u8_url)
+        if not html_str or "initialRoomDossier" not in html_str:
+            if html_str and "blocked" in html_str.lower():
+                print(f"Chaturbate 访问被拦截，请检查代理设置。")
+            return {"anchor_name": room_slug, "is_live": False}
+
+        # 提取 window.initialRoomDossier 字符串变量
+        # 对应 Go 正则: `window\.initialRoomDossier = "(.*?)"`
+        match = re.search(r'window\.initialRoomDossier\s*=\s*"(.*?)";', html_str, re.DOTALL)
+        if not match:
+             # 有时候可能没有分号，尝试宽泛匹配
+            match = re.search(r'window\.initialRoomDossier\s*=\s*"(.*?)"', html_str, re.DOTALL)
+
+        if not match:
+            print(f"无法在 Chaturbate 页面中找到 room dossier 数据。")
+            return {"anchor_name": room_slug, "is_live": False}
+
+        try:
+            # 获取原始字符串
+            raw_dossier = match.group(1)
+            
+            # 处理 Unicode 转义 (对应 Go 的 strconv.Unquote(strings.Replace(..., `\\u`, `\u`, -1)))
+            # Python 的 codecs.decode('unicode_escape') 可以处理标准转义，但这里可能涉及双重转义
+            # 先手动将 \\u 替换为 \u，然后进行 unicode_escape 解码
+            # 注意：Python 正则提取出来的字符串已经是 Python 字符串了
+            # 如果原始网页是 `var x = "\\u007b..."`，Python re 提取出来的是 `\u007b...` (作为字符串内容)
+            # 我们需要把它变成真正的 JSON 字符串
+            
+            # 使用 json.loads 解析字符串形式的 JSON，它会自动处理转义
+            # 例如: json.loads('"\u007b..."') 会得到 '{...}'
+            # 这里 raw_dossier 是正则捕获组的内容，不包含两边的引号
+            # 所以我们需要把它看作是一个 JSON 字符串的内容
+            
+            # 尝试直接对提取出的内容进行处理
+            # 这里的 raw_dossier 可能包含了类似 \\u0022 的转义字符
+            # 我们可以尝试用 codecs.decode(raw_dossier.encode('utf-8'), 'unicode_escape')
+            # 或者更简单：直接作为 JSON 字符串的一部分进行解析
+            
+            # 参考 Go 实现：strconv.Unquote(strings.Replace(strconv.Quote(matches[1]), `\\u`, `\u`, -1))
+            # Go 的逻辑是：先转义成 Go 字面量，替换 \\u 为 \u，再反转义。这实际上是处理了双重转义。
+            
+            # 在 Python 中，如果 raw_dossier 包含 \\u0022，我们需要让它变成 \u0022
+            decoded_dossier = raw_dossier.replace(r'\\u', r'\u')
+            
+            # 现在我们需要把它解释为普通的字符串，去除转义
+            # 方法是将其包裹在引号中，然后用 json.loads 解析，或者使用 unicode_escape
+            # 但是 json.loads比较安全，前提是我们构造出合法的 JSON 字符串
+            
+            # 但其实正则提取出的 group(1) 已经是我们想要的内容了，只是可能有 \\u 转义
+            # 比如网页源码是: window.initialRoomDossier = "{\"a\":1}";
+            # 正则提取出的 group(1) 是: {\"a\":1}  (注意由 \" 转义)
+            # 如果是有 unicode: window.initialRoomDossier = "\\u007b..."; ("{" 的 unicode)
+            # group(1) 是: \\u007b...
+            
+            # 让我们尝试构造一个 JSON string 来解析它
+            # json.loads(f'"{decoded_dossier}"') 可能会报错，因为可能包含未转义的引号
+            
+            # 最稳妥的方法是 mimic Go 的逻辑：处理 unicode escape
+            # Python 的 codecs.decode(..., 'unicode_escape') 可以做这件事
+            
+            final_json_str = codecs.decode(decoded_dossier.encode('utf-8'), 'unicode_escape')
+            
+            # 现在 final_json_str 应该是一个合法的 JSON 字符串，例如 {"hls_source": ...}
+            json_data = json.loads(final_json_str)
+
+        except Exception as e:
+            # 如果上面的复杂解码失败，尝试简单的直接解析 (兼容旧逻辑或简单情况)
+            try:
+                json_data = json.loads(raw_dossier)
+            except:
+                print(f"解析 Chaturbate dossier JSON 失败: {e}")
+                return {"anchor_name": room_slug, "is_live": False}
+
+        anchor_name = json_data.get('broadcaster_username', room_slug)
+        room_status = json_data.get('room_status', 'offline')
+        m3u8_url = json_data.get('hls_source', '')
+        
+        # 只有在公开直播且有 HLS 地址时才认为是在线
+        live_status = room_status == 'public' and bool(m3u8_url)
+
+        if live_status:
+            # 解析 Master Playlist，获取最高画质
+            try:
+                play_url_list = await get_play_url_list(m3u8_url, proxy=proxy_addr, abroad=False)
+                if play_url_list:
+                    # 获取最高画质的 URL (已排序)
+                    best_url = play_url_list[0]
+                    # 如果是相对路径，拼接完整 URL
+                    if not best_url.startswith('http'):
+                        base_url = m3u8_url.rsplit('/', 1)[0]
+                        m3u8_url = f"{base_url}/{best_url}"
+                    else:
+                        m3u8_url = best_url
+            except Exception as e:
+                print(f"Chaturbate 获取最高画质失败，使用默认 URL: {e}")
 
         result = {"anchor_name": anchor_name, "is_live": live_status}
         if live_status:
-            result |= {'is_live': True, 'm3u8_url': m3u8_url, 'record_url': m3u8_url}
+            result.update({'m3u8_url': m3u8_url, 'record_url': m3u8_url})
         else:
-            # 如果没在直播，打印一下状态原因，方便用户排查（如：offline, private, password 等）
             if room_status != 'offline':
                 print(f"\rChaturbate 房间 {room_slug} 当前状态: {room_status}")
                 
