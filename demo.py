@@ -47,7 +47,7 @@ LIVE_STREAM_CONFIG = {
         "func": spider.get_blued_stream_url,
     },
     "sooplive": {
-        "url": "https://play.sooplive.co.kr/sw7love",
+        "url": "https://play.sooplive.com/sw7love",
         "func": spider.get_sooplive_stream_data,
     },
     "netease": {

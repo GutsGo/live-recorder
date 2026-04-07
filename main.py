@@ -542,7 +542,8 @@ def get_record_headers(platform, live_url):
         '17Live': 'referer:https://17.live/en/live/6302408',
         '浪Live': 'referer:https://www.lang.live',
         'shopee': f'origin:{live_domain}',
-        'Blued直播': 'referer:https://app.blued.cn'
+        'Blued直播': 'referer:https://app.blued.cn',
+        'SOOP': 'referer:https://play.sooplive.com/'
     }
     return record_headers.get(platform)
 
@@ -2075,10 +2076,10 @@ while True:
                 ]
                 overseas_platform_host = [
                     'www.tiktok.com',
-                    'play.sooplive.co.kr',
-                    'm.sooplive.co.kr',
-                    'www.sooplive.com',
+                    'play.sooplive.com',
                     'm.sooplive.com',
+                    'www.sooplive.com',
+                    'api.sooplive.com',
                     'www.pandalive.co.kr',
                     'www.winktv.co.kr',
                     'www.flextv.co.kr',

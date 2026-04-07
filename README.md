@@ -124,7 +124,7 @@ buled直播:
 https://app.blued.cn/live?id=Mp6G2R
 
 SOOP:
-https://play.sooplive.co.kr/sw7love
+https://play.sooplive.com/sw7love
 
 网易cc:
 https://cc.163.com/583946984

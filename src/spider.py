@@ -906,8 +906,8 @@ async def login_sooplive(username: str, password: str, proxy_addr: OptionalStr =
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'Origin': 'https://play.sooplive.co.kr',
-        'Referer': 'https://play.sooplive.co.kr/superbsw123/277837074',
+        'Origin': 'https://play.sooplive.com',
+        'Referer': 'https://play.sooplive.com/superbsw123/277837074',
     }
 
     data = {
@@ -921,7 +921,7 @@ async def login_sooplive(username: str, password: str, proxy_addr: OptionalStr =
         'isLoginRetain': 'Y',
     }
 
-    url = 'https://login.sooplive.co.kr/app/LoginAction.php'
+    url = 'https://login.sooplive.com/app/LoginAction.php'
 
     try:
         cookie_dict = await async_req(url, proxy_addr=proxy_addr, headers=headers,
@@ -940,8 +940,8 @@ async def get_sooplive_cdn_url(broad_no: str, proxy_addr: OptionalStr = None, co
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0',
         'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-        'Origin': 'https://play.sooplive.co.kr',
-        'Referer': 'https://play.sooplive.co.kr/oul282/249469582',
+        'Origin': 'https://play.sooplive.com',
+        'Referer': 'https://play.sooplive.com/oul282/249469582',
         'Content-Type': 'application/x-www-form-urlencoded',
     }
     if cookies:
@@ -950,12 +950,12 @@ async def get_sooplive_cdn_url(broad_no: str, proxy_addr: OptionalStr = None, co
     params = {
         'return_type': 'gcp_cdn',
         'use_cors': 'false',
-        'cors_origin_url': 'play.sooplive.co.kr',
+        'cors_origin_url': 'play.sooplive.com',
         'broad_key': f'{broad_no}-common-master-hls',
         'time': '8361.086329376785',
     }
 
-    url2 = 'http://livestream-manager.sooplive.co.kr/broad_stream_assign.html?' + urllib.parse.urlencode(params)
+    url2 = 'http://livestream-manager.sooplive.com/broad_stream_assign.html?' + urllib.parse.urlencode(params)
     json_str = await async_req(url=url2, proxy_addr=proxy_addr, headers=headers, abroad=True)
     json_data = json.loads(json_str)
 
@@ -966,8 +966,8 @@ async def get_sooplive_cdn_url(broad_no: str, proxy_addr: OptionalStr = None, co
 async def get_sooplive_tk(url: str, rtype: str, proxy_addr: OptionalStr = None, cookies: OptionalStr = None) -> str | tuple:
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
-        'Origin': 'https://play.sooplive.co.kr',
-        'Referer': 'https://play.sooplive.co.kr/secretx/250989857',
+        'Origin': 'https://play.sooplive.com',
+        'Referer': 'https://play.sooplive.com/secretx/250989857',
         'Content-Type': 'application/x-www-form-urlencoded',
     }
 
@@ -992,7 +992,7 @@ async def get_sooplive_tk(url: str, rtype: str, proxy_addr: OptionalStr = None, 
         'is_revive': 'false',
     }
 
-    url2 = f'https://live.sooplive.co.kr/afreeca/player_live_api.php?bjid={bj_id}'
+    url2 = f'https://live.sooplive.com/afreeca/player_live_api.php?bjid={bj_id}'
     json_str = await async_req(url=url2, proxy_addr=proxy_addr, headers=headers, data=data, abroad=True)
     json_data = json.loads(json_str)
 
@@ -1055,14 +1055,17 @@ async def _fetch_web_stream_data_global(url: str, proxy_addr: OptionalStr = None
                 headers['cookie'] = cookies
             resp = await async_req(url=m3u8, proxy_addr=proxy_addr, headers=headers)
             play_url_list = []
-            url_prefix = '/'.join(m3u8.split('/')[0:3])
+            url_prefix = m3u8.rsplit('/', maxsplit=1)[0] + '/'
             for i in resp.split('\n'):
                 if not i.startswith('#') and i.strip():
-                    play_url_list.append(url_prefix + i.strip())
+                    if i.startswith('http'):
+                        play_url_list.append(i.strip())
+                    else:
+                        play_url_list.append(url_prefix + i.strip())
             bandwidth_pattern = re.compile(r'BANDWIDTH=(\d+)')
-            bandwidth_list = bandwidth_pattern.findall(resp)
-            url_to_bandwidth = {purl: int(bandwidth) for bandwidth, purl in zip(bandwidth_list, play_url_list)}
-            play_url_list = sorted(play_url_list, key=lambda purl: url_to_bandwidth[purl], reverse=True)
+            bandwidth_list = list(map(int, bandwidth_pattern.findall(resp)))
+            url_to_bandwidth = {purl: bandwidth for bandwidth, purl in zip(bandwidth_list, play_url_list)}
+            play_url_list = sorted(play_url_list, key=lambda purl: url_to_bandwidth.get(purl, 0), reverse=True)
             return play_url_list
 
         m3u8_url = 'https://global-media.sooplive.com/live/' + str(bj_id) + '/master.m3u8'
@@ -1083,28 +1086,38 @@ async def get_sooplive_stream_data(
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0',
         'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-        'Referer': 'https://m.sooplive.co.kr/',
+        'Referer': 'https://play.sooplive.com/',
         'Content-Type': 'application/x-www-form-urlencoded',
     }
     if cookies:
         headers['Cookie'] = cookies
 
-    if "sooplive.com" in url:
+    if "sooplive.com" in url and "play.sooplive.com" not in url and "m.sooplive.com" not in url:
         return await _fetch_web_stream_data_global(url, proxy_addr, cookies)
 
     split_url = url.split('/')
     bj_id = split_url[3] if len(split_url) < 6 else split_url[5]
+
+    if not cookies and username and password:
+        try:
+            cookies = await login_sooplive(username, password, proxy_addr=proxy_addr)
+            if cookies and 'AuthTicket=' in cookies:
+                headers['Cookie'] = cookies
+                print("sooplive platform login successful using account and password!")
+        except Exception as e:
+            print(f"sooplive platform login failed: {e}")
 
     data = {
         'bj_id': bj_id,
         'broad_no': '',
         'agent': 'web',
         'confirm_adult': 'true',
-        'player_type': 'webm',
+        'player_type': 'html5',
+        'quality': 'master',
         'mode': 'live',
     }
 
-    url2 = 'http://api.m.sooplive.co.kr/broad/a/watch'
+    url2 = 'http://api.m.sooplive.com/broad/a/watch'
 
     json_str = await async_req(url=url2, proxy_addr=proxy_addr, headers=headers, data=data, abroad=True)
     json_data = json.loads(json_str)
@@ -1123,12 +1136,17 @@ async def get_sooplive_stream_data(
         play_url_list = []
         url_prefix = m3u8.rsplit('/', maxsplit=1)[0] + '/'
         for i in resp.split('\n'):
-            if i.startswith('auth_playlist'):
+            if not i.startswith('#') and i.strip():
+                if i.startswith('http'):
+                    play_url_list.append(i.strip())
+                else:
+                    play_url_list.append(url_prefix + i.strip())
+            elif i.startswith('auth_playlist'):
                 play_url_list.append(url_prefix + i.strip())
         bandwidth_pattern = re.compile(r'BANDWIDTH=(\d+)')
-        bandwidth_list = bandwidth_pattern.findall(resp)
-        url_to_bandwidth = {purl: int(bandwidth) for bandwidth, purl in zip(bandwidth_list, play_url_list)}
-        play_url_list = sorted(play_url_list, key=lambda purl: url_to_bandwidth[purl], reverse=True)
+        bandwidth_list = list(map(int, bandwidth_pattern.findall(resp)))
+        url_to_bandwidth = {purl: bandwidth for bandwidth, purl in zip(bandwidth_list, play_url_list)}
+        play_url_list = sorted(play_url_list, key=lambda purl: url_to_bandwidth.get(purl, 0), reverse=True)
         return play_url_list
 
     if not anchor_name:
@@ -1177,12 +1195,68 @@ async def get_sooplive_stream_data(
             return result
     if json_data['result'] == 1 and anchor_name:
         broad_no = json_data['data']['broad_no']
-        hls_authentication_key = json_data['data']['hls_authentication_key']
-        view_url_data = await get_sooplive_cdn_url(broad_no, proxy_addr=proxy_addr)
-        view_url = view_url_data['view_url']
-        m3u8_url = view_url + '?aid=' + hls_authentication_key
-        result |= {'is_live': True, 'm3u8_url': m3u8_url, 'play_url_list': await get_url_list(m3u8_url)}
-    result['new_cookies'] = None
+        cdn = json_data['data'].get("cdn", "gs_cdn")
+        viewpresets = json_data['data'].get('viewpreset', [])
+        
+        play_url_list = []
+        highest_m3u8_url = ''
+        target_cdn = 'lg_cdn_pc_web' if 'lg' in cdn else 'gs_cdn_pc_web'
+        
+        if viewpresets:
+            for vp in reversed(viewpresets):
+                qual = vp.get('name')
+                if qual == 'auto': continue
+                
+                tk_data = {
+                    'bid': bj_id, 'bno': broad_no, 'type': 'aid', 'pwd': '',
+                    'player_type': 'html5', 'stream_type': 'common', 'quality': qual,
+                    'mode': 'landing', 'from_api': '0',
+                }
+                tk_url = f'https://live.sooplive.com/afreeca/player_live_api.php?bjid={bj_id}'
+                
+                try:
+                    resp_str = await async_req(url=tk_url, proxy_addr=proxy_addr, headers=headers, data=tk_data, abroad=True)
+                    dq = json.loads(resp_str)
+                    if 'CHANNEL' in dq and dq['CHANNEL'].get('RESULT') == 1:
+                        hls_auth = dq['CHANNEL']['AID']
+                        params = {
+                            'return_type': target_cdn,
+                            'use_cors': 'false',
+                            'cors_origin_url': 'play.sooplive.com',
+                            'broad_key': f'{broad_no}-common-{qual}-hls',
+                        }
+                        v_assign_url = 'http://livestream-manager.sooplive.com/broad_stream_assign.html?' + urllib.parse.urlencode(params)
+                        v_res = await async_req(v_assign_url, proxy_addr=proxy_addr, headers=headers, abroad=True)
+                        v_data = json.loads(v_res)
+                        vurl = v_data.get('view_url', '')
+                        if vurl:
+                            m3u8_url = vurl + '?aid=' + hls_auth
+                            m3_body = await async_req(m3u8_url, proxy_addr=proxy_addr, headers=headers, abroad=True, timeout=10)
+                            if m3_body and "#EXTM3U" in m3_body and "<html>" not in m3_body:
+                                play_url_list.append(m3u8_url)
+                                if not highest_m3u8_url:
+                                    highest_m3u8_url = m3u8_url
+                            else:
+                                pass
+                        else:
+                            pass
+                    else:
+                        pass
+                except Exception as e:
+                    print(f"Failed to fetch {qual} stream: {e}")
+                    continue
+        else:
+            hls_authentication_key = json_data['data']['hls_authentication_key']
+            view_url_data = await get_sooplive_cdn_url(broad_no, proxy_addr=proxy_addr, cookies=cookies)
+            view_url = view_url_data['view_url']
+            m3u8_url = view_url + '?aid=' + hls_authentication_key
+            highest_m3u8_url = m3u8_url
+            play_url_list = await get_url_list(m3u8_url)
+
+        if highest_m3u8_url:
+            result |= {'is_live': True, 'm3u8_url': highest_m3u8_url, 'play_url_list': play_url_list}
+            
+    result['new_cookies'] = cookies if cookies else None
     return result
 
 
