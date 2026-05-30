@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+import os
+# 修复部分版本 httpx 解析环境变量 no_proxy 中 IPv6 回环地址时引发 Invalid port 的问题
+for k in ('no_proxy', 'NO_PROXY'):
+    if k in os.environ:
+        os.environ[k] = ','.join([p for p in os.environ[k].split(',') if '::1' not in p])
+
 import httpx
 from typing import Dict, Any
 from .. import utils

@@ -425,6 +425,45 @@ def direct_download_stream(source_url: str, save_path: str, record_name: str, li
         return False
 
 
+def _convert_split_files(save_file_path: str, converted_files: set) -> None:
+    """分段录制时，实时检测已完成的切片文件并转为MP4"""
+    save_dir = os.path.dirname(save_file_path)
+    file_basename = os.path.basename(save_file_path)
+    prefix = file_basename.rsplit('_', maxsplit=1)[0]
+    all_files = utils.get_file_paths(save_dir)
+    now = time.time()
+
+    for path in all_files:
+        if prefix in os.path.basename(path) and path not in converted_files:
+            if not path.endswith(('.ts', '.mkv', '.flv')):
+                continue
+            try:
+                if os.path.getsize(path) > 0 and (now - os.path.getmtime(path)) > 30:
+                    converted_files.add(path)
+                    threading.Thread(target=converts_mp4, args=(path, delete_origin_file)).start()
+            except OSError:
+                pass
+
+
+def _convert_remaining_split_files(save_file_path: str, converted_files: set) -> None:
+    """分段录制进程退出后，转换剩余未转换的切片文件"""
+    save_dir = os.path.dirname(save_file_path)
+    file_basename = os.path.basename(save_file_path)
+    prefix = file_basename.rsplit('_', maxsplit=1)[0]
+    all_files = utils.get_file_paths(save_dir)
+
+    for path in all_files:
+        if prefix in os.path.basename(path) and path not in converted_files:
+            if not path.endswith(('.ts', '.mkv', '.flv')):
+                continue
+            try:
+                if os.path.getsize(path) > 0:
+                    converted_files.add(path)
+                    threading.Thread(target=converts_mp4, args=(path, delete_origin_file)).start()
+            except OSError:
+                pass
+
+
 def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, save_type: str,
                      script_command: str | None = None) -> bool:
     save_file_path = ffmpeg_command[-1]
@@ -441,6 +480,7 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
         create_var[subs_thread_name].daemon = True
         create_var[subs_thread_name].start()
 
+    converted_files = set()
     while process.poll() is None:
         if record_url in url_comments or record_url not in url_line_list or exit_recording:
             if record_url in url_comments:
@@ -458,14 +498,14 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
             process.wait()
             if converts_to_mp4 and save_type in ('TS', 'MKV', 'FLV'):
                 if split_video_by_time:
-                    file_paths = utils.get_file_paths(os.path.dirname(save_file_path))
-                    prefix = os.path.basename(save_file_path).rsplit('_', maxsplit=1)[0]
-                    for path in file_paths:
-                        if prefix in path:
-                            threading.Thread(target=converts_mp4, args=(path, delete_origin_file)).start()
+                    _convert_remaining_split_files(save_file_path, converted_files)
                 else:
                     threading.Thread(target=converts_mp4, args=(save_file_path, delete_origin_file)).start()
             return True
+
+        if converts_to_mp4 and split_video_by_time and save_type in ('TS', 'MKV', 'FLV'):
+            _convert_split_files(save_file_path, converted_files)
+
         time.sleep(1)
 
     return_code = process.returncode
@@ -473,11 +513,7 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
     if return_code == 0:
         if converts_to_mp4 and save_type in ('TS', 'MKV', 'FLV'):
             if split_video_by_time:
-                file_paths = utils.get_file_paths(os.path.dirname(save_file_path))
-                prefix = os.path.basename(save_file_path).rsplit('_', maxsplit=1)[0]
-                for path in file_paths:
-                    if prefix in path:
-                        threading.Thread(target=converts_mp4, args=(path, delete_origin_file)).start()
+                _convert_remaining_split_files(save_file_path, converted_files)
             else:
                 threading.Thread(target=converts_mp4, args=(save_file_path, delete_origin_file)).start()
         print(f"\n{record_name} {stop_time} 直播录制完成\n")
@@ -506,6 +542,11 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
 
     else:
         color_obj.print_colored(f"\n{record_name} {stop_time} 直播录制出错,返回码: {return_code}\n", color_obj.RED)
+        if converts_to_mp4 and save_type in ('TS', 'MKV', 'FLV'):
+            if split_video_by_time:
+                _convert_remaining_split_files(save_file_path, converted_files)
+            else:
+                threading.Thread(target=converts_mp4, args=(save_file_path, delete_origin_file)).start()
 
     recording.discard(record_name)
     return False

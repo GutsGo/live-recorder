@@ -317,6 +317,12 @@ async def get_douyu_stream_url(json_data: dict, video_quality: str, cookies: str
     json_data.pop("room_id")
     rate = video_quality_options.get(video_quality, '0')
     flv_data = await get_douyu_stream_data(rid, rate, cookies=cookies, proxy_addr=proxy_addr)
+    
+    if not isinstance(flv_data, dict) or 'data' not in flv_data:
+        from src.utils import logger
+        logger.error(f"斗鱼直播获取流地址失败或鉴权未通过: {flv_data}")
+        return json_data
+        
     rtmp_url = flv_data['data'].get('rtmp_url')
     rtmp_live = flv_data['data'].get('rtmp_live')
     if rtmp_live:
